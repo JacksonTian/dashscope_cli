@@ -46,6 +46,9 @@ async function query(messages, ctx) {
     for await (const event of readAsSSE(response)) {
         lastEvent = event;
         const data = JSON.parse(event.data);
+        if (event.event === 'error') {
+            throw new Error(`Gets error from dashscope. ${event.data}`);
+        }
         const text = data.output.text;
         process.stdout.write(text.substring(current.length));
         current = text;
@@ -57,30 +60,33 @@ async function query(messages, ctx) {
     return lastEvent;
 }
 
-const config = await loadConfig();
-if (!config.app_key) {
+async function question(prompt) {
     const answers = await inquirer.prompt([
         {
-            name: 'app_key',
-            message: 'Please input your dashscope app key:'
+            name: 'question',
+            ...prompt
         }
     ]);
+    return answers.question.trim();
+}
+
+const config = await loadConfig();
+if (!config.app_key) {
+    const answers = await question({
+        message: 'Please input your dashscope app key(you can visit https://help.aliyun.com/zh/dashscope/developer-reference/activate-dashscope-and-create-an-api-key to get api key):'
+    });
     config.app_key = answers.app_key.trim();
     await saveConfig(config);
 }
 
 if (!config.model) {
-    const answers = await inquirer.prompt([
-        {
-            type: 'list',
-            name: 'model',
-            message: 'Please select your model:',
-            choices: [
-                'qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-1201', 'qwen-max-longcontext'
-            ]
-        }
-    ]);
-    const model = answers.model.trim();
+    const model = await question({
+        type: 'list',
+        message: 'Please select your model:',
+        choices: [
+            'qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-1201', 'qwen-max-longcontext'
+        ]
+    });
     if (model) {
         config.model = model;
         await saveConfig(config);
@@ -88,51 +94,64 @@ if (!config.model) {
 }
 
 const messages = [];
+
 while (true) {
-    const answers = await inquirer.prompt([
-        {
-            name: 'question',
-            message: 'What is your query:',
-        }
-    ]);
-    const question = answers.question.trim();
+    const answer = await question({
+        message: 'What is your query:(type .help to get helps)',
+    });
 
-    if (question === '.set_app_key') {
-        const answers = await inquirer.prompt([
-            {
-                name: 'app_key',
-                message: 'Please input your new dashscope app key:'
-            }
-        ]);
+    if (answer === '.set_app_key') {
+        const appkey = await question({
+            message: 'Please input your new dashscope app key:'
+        });
 
-        const appkey = answers.app_key.trim();
         if (appkey) {
             config.app_key = appkey;
             await saveConfig(config);
         }
+        continue;
     }
 
-    if (question === '.set_model') {
-        const answers = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'model',
-                message: 'Please select your model:',
-                choices: [
-                    'qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-1201', 'qwen-max-longcontext'
-                ]
-            }
-        ]);
-        const model = answers.model.trim();
+    if (answer === '.set_model') {
+        const model = await question({
+            type: 'list',
+            message: 'Please select your model:',
+            choices: [
+                'qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-1201', 'qwen-max-longcontext'
+            ]
+        });
         if (model) {
             config.model = model;
             await saveConfig(config);
         }
+        continue;
+    }
+
+    if (answer === '.clean_context') {
+        messages.length = 0;
+        continue;
+    }
+
+    if (answer === '.exit') {
+        break;
+    }
+
+    if (answer === '.help') {
+        console.log(`.set_model     choose model`);
+        console.log(`.set_app_key   set app key`);
+        console.log(`.clean_context clean context`);
+        console.log(`.exit          exit the program`);
+        continue;
+    }
+
+    if (!answer) {
+        console.log(`query can not be empty! please re-type it.`);
+        continue;
     }
 
     messages.push({
         role: 'user',
-        content: question
+        content: answer
     });
 
     const event = await query(messages, {
