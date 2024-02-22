@@ -1,5 +1,13 @@
 # Dashscope CLI
 
+## Features
+
+- [x] 支持通义千问 API
+- [ ] 其余 dashscope 支持的大语言模型
+- [ ] 其余图片生成
+- [ ] 其余语音生成
+- [ ] 其余视频生成
+
 ## Installation
 
 ```sh
@@ -13,6 +21,10 @@ When you run `ds` first, it will query you input `api_key` and choose a `model`.
 ### Billing
 
 Using this tool may incur fees. The billing detail please according to pricing document.
+
+模型计费文档请参考：<https://dashscope.console.aliyun.com/billing>。可以通过使用免费的额度或者限时免费的模型，您可以免费拥有通义千问作为智能助手。
+
+如果后续有询价接口，工具将在启动时告知费用/额度情况，避免费用产生。
 
 ## Usage
 
