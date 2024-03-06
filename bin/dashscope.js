@@ -30,7 +30,7 @@ async function query(messages, ctx) {
         headers: {
             'Content-Type': 'application/json',
             'Accept': 'text/event-stream',
-            'Authorization': `Bearer ${ctx.app_key}`
+            'Authorization': `Bearer ${ctx.api_key}`
         },
         readTimeout: 100000,
         data: JSON.stringify({
@@ -71,11 +71,11 @@ async function question(prompt) {
 }
 
 const config = await loadConfig();
-if (!config.app_key) {
-    const answers = await question({
-        message: 'Please input your dashscope app key(you can visit https://help.aliyun.com/zh/dashscope/developer-reference/activate-dashscope-and-create-an-api-key to get api key):'
+if (!config.api_key) {
+    const apikey = await question({
+        message: 'Please input your dashscope api key(you can visit https://help.aliyun.com/zh/dashscope/developer-reference/activate-dashscope-and-create-an-api-key to get api key):'
     });
-    config.app_key = answers.app_key.trim();
+    config.api_key = apikey.trim();
     await saveConfig(config);
 }
 
@@ -100,13 +100,13 @@ while (true) {
         message: 'What is your query:(type .help to get helps)',
     });
 
-    if (answer === '.set_app_key') {
-        const appkey = await question({
-            message: 'Please input your new dashscope app key:'
+    if (answer === '.set_api_key') {
+        const apikey = await question({
+            message: 'Please input your new dashscope api key:'
         });
 
-        if (appkey) {
-            config.app_key = appkey;
+        if (apikey) {
+            config.api_key = apikey.trim();
             await saveConfig(config);
         }
         continue;
@@ -137,10 +137,10 @@ while (true) {
     }
 
     if (answer === '.help') {
-        console.log(`.set_model     choose model`);
-        console.log(`.set_app_key   set app key`);
-        console.log(`.clean_context clean context`);
-        console.log(`.exit          exit the program`);
+        console.log(`.set_model         choose model`);
+        console.log(`.set_api_key       set api key`);
+        console.log(`.clean_context     clean context`);
+        console.log(`.exit              exit the program`);
         continue;
     }
 
@@ -155,7 +155,7 @@ while (true) {
     });
 
     const event = await query(messages, {
-        app_key: config.app_key,
+        api_key: config.api_key,
         model: config.model
     });
 
