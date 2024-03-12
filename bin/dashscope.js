@@ -93,6 +93,8 @@ if (!config.model) {
     }
 }
 
+console.log(`current model: ${config.model}. type \`.set_model\` to change it.`);
+
 const messages = [];
 
 while (true) {
@@ -118,12 +120,15 @@ while (true) {
             message: 'Please select your model:',
             choices: [
                 'qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-max-1201', 'qwen-max-longcontext'
-            ]
+            ],
+            default: config.model
         });
+
         if (model) {
             config.model = model;
             await saveConfig(config);
         }
+
         continue;
     }
 
@@ -141,6 +146,24 @@ while (true) {
         console.log(`.set_api_key       set api key`);
         console.log(`.clean_context     clean context`);
         console.log(`.exit              exit the program`);
+        console.log(`.set_verbose       turn on/off verbose mode`);
+        console.log(`.help              show this help`);
+        continue;
+    }
+
+    if (answer === '.set_verbose') {
+        const verbose = await question({
+            type: 'list',
+            message: 'Turn on/off verbose:',
+            choices: [
+                'true',
+                'false'
+            ],
+            default: config.verbose || false
+        });
+
+        config.verbose = verbose === 'true';
+        await saveConfig(config);
         continue;
     }
 
@@ -160,8 +183,15 @@ while (true) {
     });
 
     const data = JSON.parse(event.data);
+
     messages.push({
         role: 'assistant',
         content: data.output.text
     });
+
+    if (config.verbose === true) {
+        const usage = data.usage;
+        console.log(`[Verbose] Used tokens: ${usage.total_tokens}, input: ${usage.input_tokens}, output: ${usage.output_tokens}. ${data.request_id}`);
+        console.log(`[Verbose] current context message count: ${messages.length}`);
+    }
 }
