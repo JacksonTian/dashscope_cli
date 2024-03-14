@@ -2,10 +2,23 @@
 import { homedir } from "os";
 import path from "path";
 import { access, readFile, writeFile, constants } from "fs/promises";
+import readline from "readline/promises";
 
+import chalk from 'chalk';
 import { request, readAsSSE } from "httpx";
 import ini from "ini";
 import inquirer from 'inquirer';
+
+const rl = readline.createInterface({
+    input: process.stdin,
+    output: process.stdout,
+    completer: (line) => {
+        const completions = '.set_model .set_api_key .clean_context .exit .set_verbose .help'.split(' ');
+        const hits = completions.filter((c) => c.startsWith(line));
+        // Show all completions if none found
+        return [hits.length ? hits : completions, line];
+    }
+});
 
 async function loadConfig() {
     const rcPath = path.join(homedir(), '.dashscoperc');
@@ -93,15 +106,14 @@ if (!config.model) {
     }
 }
 
-console.log(`current model: ${config.model}. type \`.set_model\` to change it.`);
+console.log(`Current model: ${config.model}. type \`.set_model\` to change it.`);
 
 const messages = [];
 
 while (true) {
-    const answer = await question({
-        message: 'What is your query:(type .help to get helps)',
-    });
-
+    const answer = await rl.question(chalk.bold('What is your query: ') + '(type .help to get helps) \n> ');
+    // 因为inquery 也在使用 readline，而 stdout 是全局的，所以为了不互相影响，使用后，先暂停。
+    rl.pause();
     if (answer === '.set_api_key') {
         const apikey = await question({
             message: 'Please input your new dashscope api key:'
@@ -138,7 +150,8 @@ while (true) {
     }
 
     if (answer === '.exit') {
-        break;
+        console.log(`Quiting dashcope.`)
+        process.exit(0);
     }
 
     if (answer === '.help') {
